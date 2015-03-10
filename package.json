@@ -1,0 +1,23 @@
+{
+  "name": "jquery-modules",
+  "version": "0.0.1",
+  "description": "Simple jQuery application modules plugin",
+  "main": "dist/jquery.modules.min.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dgrubelic/jquery-modules.git"
+  },
+  "keywords": [
+    "jquery",
+    "modules"
+  ],
+  "author": "Davor Grubelić",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/dgrubelic/jquery-modules/issues"
+  },
+  "homepage": "https://github.com/dgrubelic/jquery-modules"
+}
