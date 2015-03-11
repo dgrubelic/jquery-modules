@@ -1,0 +1,25 @@
+{
+  "name": "jquery-modules",
+  "version": "0.0.1",
+  "homepage": "https://github.com/dgrubelic/jquery-modules",
+  "authors": [
+    "dgrubelic <davor.grubelic@gmail.com>"
+  ],
+  "description": "Simple jQuery based application modules plugin",
+  "main": "dist/jquery.modules.min.js",
+  "keywords": [
+    "jquery",
+    "modules"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "jquery": "~2.1.3"
+  }
+}
