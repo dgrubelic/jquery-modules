@@ -50,6 +50,9 @@
 					}
 				});
 
+				// Setup root element for module access
+				moduleCore.$rootElement = $rootElement;
+
 				moduleCore.init = function () {
 					if ($.type(config.init) === 'function') {
 						config.init.call(moduleCore);
