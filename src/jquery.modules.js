@@ -43,14 +43,32 @@
 
         // Register events
         $.each(config.events, function (event, action) {
-          var params = event.match(/^([\w]+)\(([^)]+)\)$/),
-            eventType = params[1],
+          var params = event.match(/^([\w]+)\(([^)]+)\)$/);
+
+          var eventType = null,
+              selector;
+
+          if ($.type(params) === 'array' && params.length >= 2) {
+            eventType = params[1];
             selector = params[2];
+          } else {
+            eventType = event;
+          }
+
+          if (['string', 'array'].indexOf($.type(action)) === -1) {
+            throw "Unsupported event action parameter";
+          }
 
           moduleCore.$el.on(eventType, selector, function (e) {
             var $this = $(this);
 
-            moduleCore.action(action, e, $this);
+            if ($.type(action) === 'array') {
+              $.each(action, function (index, actionName) {
+                moduleCore.action(actionName, e, $this);
+              });
+            } else if ($.type(action) === 'string') {
+              moduleCore.action(action, e, $this);
+            }
           });
 
           if (registredEvents.indexOf(eventType) === -1) {
