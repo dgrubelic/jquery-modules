@@ -3,7 +3,19 @@
 
   var initializedModules = {};
 
-  $.fn.module = function (globalConfig) {
+  $.fn.module = function (globalConfig, options) {
+    var pluginOptions = {};
+
+    if ($.type(options) === 'boolean') {
+      options = {
+        singleton: options
+      };
+    }
+
+    pluginOptions = $.extend({}, {
+      singleton: false
+    }, options);
+
     var Module = {
       extend: function ($element, cfg) {
         var config = $.extend({}, {
@@ -81,6 +93,8 @@
             config.init.call(moduleCore);
             delete moduleCore.init;
           }
+
+          return moduleCore;
         };
 
         moduleCore.destroy = function () {
@@ -105,6 +119,8 @@
           if (config.actions[actionName] && config.actions[actionName].apply) {
             config.actions[actionName].apply(moduleCore, args);
           }
+
+          return moduleCore;
         };
 
         moduleCore.trigger = function () {
@@ -112,6 +128,7 @@
             args = Array.prototype.splice.call(arguments, 1);
 
           moduleCore.$el.trigger(eventName, args);
+          return moduleCore;
         };
 
         moduleCore.digest = function () {
@@ -128,22 +145,36 @@
       initializedModules[selector] = [];
     }
 
-    this.each(function () {
-      var $this = $(this);
-
+    if (pluginOptions.singleton) {
       if (globalConfig === 'destroy') {
-        $.map(initializedModules[selector], function (module) {
-          module.destroy();
-        });
-
-        initializedModules[selector].length = 0;
-      } else {
-        var module = Module.extend($this, globalConfig);
-        module.init();
-
-        initializedModules[selector].push(module);
+        if (initializedModules[selector]) {
+          initializedModules[selector].destroy();
+          delete initializedModules[selector];
+        } else {
+          var module = initializedModules[selector] = Module.extend(this, globalConfig);
+          module.init();
+        }
       }
-    });
+    } else {
+      this.each(function () {
+        var $this = $(this);
+
+        if (globalConfig === 'destroy') {
+          $.map(initializedModules[selector], function (module) {
+            module.destroy();
+          });
+
+          initializedModules[selector].length = 0;
+        } else {
+          var module = Module.extend($this, globalConfig);
+          module.init();
+
+          initializedModules[selector].push(module);
+        }
+      });
+    }
+
+    return this;
   };
   
 }(this, this.document, jQuery) /* Auto-invoking function */ );
