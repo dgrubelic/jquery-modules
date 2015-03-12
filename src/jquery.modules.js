@@ -6,8 +6,6 @@
   $.fn.module = function (globalConfig) {
     var Module = {
       extend: function ($element, cfg) {
-        var $rootElement = $element;
-
         var config = $.extend({}, {
           components: {
             'window': window,
@@ -21,7 +19,10 @@
             registredEvents = [];
 
         // Setup root element for module access
-        moduleCore.$el = $rootElement;
+        moduleCore.$el = $element;
+
+        // Add global data container
+        moduleCore.data = {};
 
         // Bind components
         $.each(config.components, function (component, selector) {
@@ -30,7 +31,7 @@
           switch($.type(selector)) {
             case 'string':
             case 'array':
-              moduleCore['$' + component] = $rootElement.find(selector);
+              moduleCore['$' + component] = moduleCore.$el.find(selector);
               break;
             case 'function': 
               moduleCore['$' + component] = selector.call(moduleCore.$el);
@@ -46,7 +47,7 @@
             eventType = params[1],
             selector = params[2];
 
-          $rootElement.on(eventType, selector, function (e) {
+          moduleCore.$el.on(eventType, selector, function (e) {
             var $this = $(this);
 
             moduleCore.action(action, e, $this);
@@ -71,15 +72,12 @@
           }
 
           $.each(registredEvents, function (eventType) {
-            $rootElement.off(eventType);
+            moduleCore.$el.off(eventType);
           });
 
           registredEvents = null;
           moduleCore = null;
           config = null;
-
-          // And, in the end...clear root element
-          $rootElement = null;
         };
 
         moduleCore.action = function () {
@@ -95,7 +93,7 @@
           var eventName = arguments[0],
             args = Array.prototype.splice.call(arguments, 1);
 
-          $rootElement.trigger(eventName, args);
+          moduleCore.$el.trigger(eventName, args);
         };
 
         moduleCore.digest = function () {
