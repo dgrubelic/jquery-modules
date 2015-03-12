@@ -76,10 +76,10 @@
 
             if ($.type(action) === 'array') {
               $.each(action, function (index, actionName) {
-                moduleCore.action(actionName, e, $this);
+                return moduleCore.action(actionName, e, $this);
               });
             } else if ($.type(action) === 'string') {
-              moduleCore.action(action, e, $this);
+              return moduleCore.action(action, e, $this);
             }
           });
 
@@ -150,10 +150,10 @@
         if (initializedModules[selector]) {
           initializedModules[selector].destroy();
           delete initializedModules[selector];
-        } else {
-          var module = initializedModules[selector] = Module.extend(this, globalConfig);
-          module.init();
         }
+      } else {
+        var module = initializedModules[selector] = Module.extend(this, globalConfig);
+        module.init();
       }
     } else {
       this.each(function () {
