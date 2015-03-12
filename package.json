@@ -1,6 +1,6 @@
 {
   "name": "jquery-modules",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "description": "Simple jQuery application modules plugin",
   "main": "dist/jquery.modules.min.js",
   "scripts": {
@@ -15,9 +15,9 @@
     "modules"
   ],
   "dependencies": {
-    "jquery": "~2.1.3"
-  }
-  "author": "Davor Grubelić",
+    "jquery": "2.1.3"
+  },
+  "author": "Davor Grubelic",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/dgrubelic/jquery-modules/issues"

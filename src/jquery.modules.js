@@ -1,129 +1,133 @@
-(function (global, $) {
-	'use strict';
+(function (window, document, $) {
+  'use strict';
 
-	var initializedModules = {};
+  var initializedModules = {};
 
-	$.fn.module = function (globalConfig) {
-		var Module = {
-			extend: function ($element, cfg) {
-				var $rootElement = $element;
+  $.fn.module = function (globalConfig) {
+    var Module = {
+      extend: function ($element, cfg) {
+        var $rootElement = $element;
 
-				var config = $.extend({}, {
-					components: {},
-					actions: {},
-					events: {}
+        var config = $.extend({}, {
+          components: {
+            'window': window,
+            'document': document
+          },
+          actions: {},
+          events: {}
+        }, cfg);
 
-				}, cfg);
+        var moduleCore = {},
+            registredEvents = [];
 
-				var moduleCore = {},
-					registredEvents = [];
+        // Setup root element for module access
+        moduleCore.$el = $rootElement;
 
-				// Bind components
-				$.each(config.components, function (component, selector) {
-					switch($.type(selector)) {
-						case 'string':
-						case 'array':
-							moduleCore['$' + component] = $rootElement.find(selector);
-							break;
-						case 'function': 
-							moduleCore['$' + component] = selector.call(moduleCore);
-							break;
-						default:
-							break;
-					}
-				});
+        // Bind components
+        $.each(config.components, function (component, selector) {
+          if (component === 'el') return;
 
-				// Register events
-				$.each(config.events, function (event, action) {
-					var params = event.match(/^([\w]+)\(([^)]+)\)$/),
-						eventType = params[1],
-						selector = params[2];
+          switch($.type(selector)) {
+            case 'string':
+            case 'array':
+              moduleCore['$' + component] = $rootElement.find(selector);
+              break;
+            case 'function': 
+              moduleCore['$' + component] = selector.call(moduleCore.$el);
+              break;
+            default:
+              break;
+          }
+        });
 
-					$rootElement.on(eventType, selector, function (e) {
-						var $this = $(this);
+        // Register events
+        $.each(config.events, function (event, action) {
+          var params = event.match(/^([\w]+)\(([^)]+)\)$/),
+            eventType = params[1],
+            selector = params[2];
 
-						moduleCore.action(action, e, $this);
-					});
+          $rootElement.on(eventType, selector, function (e) {
+            var $this = $(this);
 
-					if (registredEvents.indexOf(eventType) === -1) {
-						registredEvents.push(eventType);
-					}
-				});
+            moduleCore.action(action, e, $this);
+          });
 
-				// Setup root element for module access
-				moduleCore.$rootElement = $rootElement;
+          if (registredEvents.indexOf(eventType) === -1) {
+            registredEvents.push(eventType);
+          }
+        });
 
-				moduleCore.init = function () {
-					if ($.type(config.init) === 'function') {
-						config.init.call(moduleCore);
-						delete moduleCore.init;
-					}
-				};
+        moduleCore.init = function () {
+          if ($.type(config.init) === 'function') {
+            config.init.call(moduleCore);
+            delete moduleCore.init;
+          }
+        };
 
-				moduleCore.destroy = function () {
-					if ($.type(config.destroy) === 'function') {
-						config.destroy.call(moduleCore);
-						delete moduleCore.destroy;
-					}
+        moduleCore.destroy = function () {
+          if ($.type(config.destroy) === 'function') {
+            config.destroy.call(moduleCore);
+            delete moduleCore.destroy;
+          }
 
-					$.each(registredEvents, function (eventType) {
-						$rootElement.off(eventType);
-					});
+          $.each(registredEvents, function (eventType) {
+            $rootElement.off(eventType);
+          });
 
-					registredEvents = null;
-					moduleCore = null;
-					config = null;
+          registredEvents = null;
+          moduleCore = null;
+          config = null;
 
-					// And, in the end...clear root element
-					$rootElement = null;
-				};
+          // And, in the end...clear root element
+          $rootElement = null;
+        };
 
-				moduleCore.action = function () {
-					var actionName = arguments[0],
-						args = Array.prototype.splice.call(arguments, 1);
+        moduleCore.action = function () {
+          var actionName = arguments[0],
+            args = Array.prototype.splice.call(arguments, 1);
 
-					if (config.actions[actionName] && config.actions[actionName].apply) {
-						config.actions[actionName].apply(moduleCore, args);
-					}
-				};
+          if (config.actions[actionName] && config.actions[actionName].apply) {
+            config.actions[actionName].apply(moduleCore, args);
+          }
+        };
 
-				moduleCore.trigger = function () {
-					var eventName = arguments[0],
-						args = Array.prototype.splice.call(arguments, 1);
+        moduleCore.trigger = function () {
+          var eventName = arguments[0],
+            args = Array.prototype.splice.call(arguments, 1);
 
-					$rootElement.trigger(eventName, args);
-				};
+          $rootElement.trigger(eventName, args);
+        };
 
-				moduleCore.digest = function () {
-					throw "Not implemented!";
-				};
+        moduleCore.digest = function () {
+          throw "Not implemented!";
+        };
 
-				return moduleCore;
-			}
-		};
+        return moduleCore;
+      }
+    };
 
-		var selector = this.selector;
+    var selector = this.selector;
 
-		if (!initializedModules[selector]) {
-			initializedModules[selector] = [];
-		}
+    if (!initializedModules[selector]) {
+      initializedModules[selector] = [];
+    }
 
-		this.each(function () {
-			var $this = $(this);
+    this.each(function () {
+      var $this = $(this);
 
-			if (globalConfig === 'destroy') {
-				$.map(initializedModules[selector], function (module) {
-					module.destroy();
-				});
+      if (globalConfig === 'destroy') {
+        $.map(initializedModules[selector], function (module) {
+          module.destroy();
+        });
 
-				initializedModules[selector].length = 0;
-			} else {
-				var module = Module.extend($this, globalConfig);
-				module.init();
+        initializedModules[selector].length = 0;
+      } else {
+        var module = Module.extend($this, globalConfig);
+        module.init();
 
-				initializedModules[selector].push(module);
-			}
-		});
-	};
-	
-}(this, jQuery) /* Auto-invoking function */ );
+        initializedModules[selector].push(module);
+      }
+    });
+  };
+  
+}(this, this.document, jQuery) /* Auto-invoking function */ );
