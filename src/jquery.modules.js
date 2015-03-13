@@ -3,6 +3,8 @@
 
   var initializedModules = {};
 
+  var forbidenMethods = ['action', 'destroy', 'init', 'trigger'];
+
   $.fn.module = function (globalConfig, options) {
     var pluginOptions = {};
 
@@ -117,10 +119,8 @@
             args = Array.prototype.splice.call(arguments, 1);
 
           if (config.actions[actionName] && config.actions[actionName].apply) {
-            config.actions[actionName].apply(moduleCore, args);
+            return config.actions[actionName].apply(moduleCore, args);
           }
-
-          return moduleCore;
         };
 
         moduleCore.trigger = function () {
@@ -152,8 +152,12 @@
           delete initializedModules[selector];
         }
       } else {
-        var module = initializedModules[selector] = Module.extend(this, globalConfig);
-        module.init();
+        if (!initializedModules[selector]) {
+          var module = initializedModules[selector] = Module.extend(this, globalConfig);
+          module.init();
+        } else {
+          throw "Hey, you are trying to re-initialize singleton module. This is no-no!";
+        }
       }
     } else {
       this.each(function () {
