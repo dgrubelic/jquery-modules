@@ -141,10 +141,6 @@
 
     var selector = this.selector;
 
-    if (!initializedModules[selector]) {
-      initializedModules[selector] = [];
-    }
-
     if (pluginOptions.singleton) {
       if (globalConfig === 'destroy') {
         if (initializedModules[selector]) {
@@ -160,6 +156,10 @@
         }
       }
     } else {
+      if (!initializedModules[selector]) {
+        initializedModules[selector] = [];
+      }
+      
       this.each(function () {
         var $this = $(this);
 
