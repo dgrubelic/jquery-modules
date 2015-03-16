@@ -1,182 +1,221 @@
 (function (window, document, $) {
   'use strict';
 
-  var initializedModules = {};
+  function generateUUID(){
+      var d = new Date().getTime();
+      var uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+          var r = (d + Math.random()*16)%16 | 0;
+          d = Math.floor(d/16);
+          return (c=='x' ? r : (r&0x3|0x8)).toString(16);
+      });
 
+      return uuid;
+  };
+
+  function deepCopy(obj) {
+      if(obj == null || typeof(obj) != 'object')
+          return obj;
+
+      var temp = obj.constructor(); // changed
+
+      for(var key in obj) {
+          if(obj.hasOwnProperty(key)) {
+              temp[key] = clone(obj[key]);
+          }
+      }
+
+      return temp;
+  }
+
+  var publicApi = ['trigger', 'pause', 'destroy'];
   var forbidenMethods = ['action', 'destroy', 'init', 'trigger'];
 
-  $.fn.module = function (globalConfig, options) {
-    var pluginOptions = {};
+  var Module = {
+    extend: function ($element, cfg) {
+      var config = $.extend({}, {
+        components: {
+          'window': window,
+          'document': document
+        },
+        actions: {},
+        events: {}
+      }, cfg);
 
-    if ($.type(options) === 'boolean') {
-      options = {
-        singleton: options
-      };
-    }
+      var isPaused = false;
 
-    pluginOptions = $.extend({}, {
-      singleton: false
-    }, options);
+      var moduleCore = {},
+          registredEvents = [];
 
-    var Module = {
-      extend: function ($element, cfg) {
-        var config = $.extend({}, {
-          components: {
-            'window': window,
-            'document': document
-          },
-          actions: {},
-          events: {}
-        }, cfg);
+      // Setup root element for module access
+      moduleCore.$el = $element;
 
-        var moduleCore = {},
-            registredEvents = [];
+      // Add global data container
+      moduleCore.data = {};
 
-        // Setup root element for module access
-        moduleCore.$el = $element;
+      // Bind components
+      $.each(config.components, function (component, selector) {
+        if (component === 'el') return;
 
-        // Add global data container
-        moduleCore.data = {};
+        switch($.type(selector)) {
+          case 'string':
+          case 'array':
+            moduleCore['$' + component] = moduleCore.$el.find(selector);
+            break;
+          case 'function': 
+            moduleCore['$' + component] = selector.call(moduleCore.$el);
+            break;
+          default:
+            break;
+        }
+      });
 
-        // Bind components
-        $.each(config.components, function (component, selector) {
-          if (component === 'el') return;
+      // Register events
+      $.each(config.events, function (event, action) {
+        var params = event.match(/^([\w]+)\(([^)]+)\)$/);
 
-          switch($.type(selector)) {
-            case 'string':
-            case 'array':
-              moduleCore['$' + component] = moduleCore.$el.find(selector);
-              break;
-            case 'function': 
-              moduleCore['$' + component] = selector.call(moduleCore.$el);
-              break;
-            default:
-              break;
+        var eventType = null,
+            selector;
+
+        if ($.type(params) === 'array' && params.length >= 2) {
+          eventType = params[1];
+          selector = params[2];
+        } else {
+          eventType = event;
+        }
+
+        if (['string', 'array'].indexOf($.type(action)) === -1) {
+          throw "Unsupported event action parameter";
+        }
+
+        moduleCore.$el.on(eventType, selector, function (e) {
+          if (isPaused) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            return false;
+          }
+
+          var $this = $(this);
+
+          if ($.type(action) === 'array') {
+            $.each(action, function (index, actionName) {
+              return moduleCore.action(actionName, e, $this);
+            });
+          } else if ($.type(action) === 'string') {
+            return moduleCore.action(action, e, $this);
           }
         });
 
-        // Register events
-        $.each(config.events, function (event, action) {
-          var params = event.match(/^([\w]+)\(([^)]+)\)$/);
+        if (registredEvents.indexOf(eventType) === -1) {
+          registredEvents.push(eventType);
+        }
+      });
 
-          var eventType = null,
-              selector;
-
-          if ($.type(params) === 'array' && params.length >= 2) {
-            eventType = params[1];
-            selector = params[2];
-          } else {
-            eventType = event;
-          }
-
-          if (['string', 'array'].indexOf($.type(action)) === -1) {
-            throw "Unsupported event action parameter";
-          }
-
-          moduleCore.$el.on(eventType, selector, function (e) {
-            var $this = $(this);
-
-            if ($.type(action) === 'array') {
-              $.each(action, function (index, actionName) {
-                return moduleCore.action(actionName, e, $this);
-              });
-            } else if ($.type(action) === 'string') {
-              return moduleCore.action(action, e, $this);
-            }
-          });
-
-          if (registredEvents.indexOf(eventType) === -1) {
-            registredEvents.push(eventType);
-          }
-        });
-
-        moduleCore.init = function () {
-          if ($.type(config.init) === 'function') {
-            config.init.call(moduleCore);
-            delete moduleCore.init;
-          }
-
-          return moduleCore;
-        };
-
-        moduleCore.destroy = function () {
-          if ($.type(config.destroy) === 'function') {
-            config.destroy.call(moduleCore);
-            delete moduleCore.destroy;
-          }
-
-          $.each(registredEvents, function (eventType) {
-            moduleCore.$el.off(eventType);
-          });
-
-          registredEvents = null;
-          moduleCore = null;
-          config = null;
-        };
-
-        moduleCore.action = function () {
-          var actionName = arguments[0],
-            args = Array.prototype.splice.call(arguments, 1);
-
-          if (config.actions[actionName] && config.actions[actionName].apply) {
-            return config.actions[actionName].apply(moduleCore, args);
-          }
-        };
-
-        moduleCore.trigger = function () {
-          var eventName = arguments[0],
-            args = Array.prototype.splice.call(arguments, 1);
-
-          moduleCore.$el.trigger(eventName, args);
-          return moduleCore;
-        };
-
-        moduleCore.digest = function () {
-          throw "Not implemented!";
-        };
+      moduleCore.init = function () {
+        if ($.type(config.init) === 'function') {
+          config.init.call(moduleCore);
+          delete moduleCore.init;
+        }
 
         return moduleCore;
-      }
-    };
+      };
 
-    var selector = this.selector;
+      moduleCore.pause = function (paused) {
+        if (isPaused !== paused) {
+          isPaused = paused;
+        }
+      };
 
-    if (pluginOptions.singleton) {
-      if (globalConfig === 'destroy') {
-        if (initializedModules[selector]) {
-          initializedModules[selector].destroy();
-          delete initializedModules[selector];
+      moduleCore.destroy = function () {
+        if ($.type(config.destroy) === 'function') {
+          config.destroy.call(moduleCore);
+          delete moduleCore.destroy;
         }
-      } else {
-        if (!initializedModules[selector]) {
-          var module = initializedModules[selector] = Module.extend(this, globalConfig);
-          module.init();
-        } else {
-          throw "Hey, you are trying to re-initialize singleton module. This is no-no!";
+
+        $.each(registredEvents, function (eventType) {
+          moduleCore.$el.off(eventType);
+        });
+
+        registredEvents = null;
+        moduleCore = null;
+        config = null;
+      };
+
+      moduleCore.action = function () {
+        if (isPaused) return;
+
+        var actionName = arguments[0],
+          args = Array.prototype.splice.call(arguments, 1);
+
+        if (config.actions[actionName] && config.actions[actionName].apply) {
+          return config.actions[actionName].apply(moduleCore, args);
         }
-      }
-    } else {
-      if (!initializedModules[selector]) {
-        initializedModules[selector] = [];
-      }
-      
+      };
+
+      moduleCore.trigger = function () {
+        if (isPaused) return moduleCore;
+
+        var eventName = arguments[0],
+          args = Array.prototype.splice.call(arguments, 1);
+
+        if (eventName) {
+          moduleCore.$el.trigger(eventName, args);
+        }
+        return moduleCore;
+      };
+
+      return moduleCore;
+    }
+  };
+
+  var moduleInstances = { /* uuid:module instance */ };
+  $.fn.module = function (moduleConfig, options) {
+    var pluginArguments = arguments;
+
+    // Call api method
+    if ($.type(moduleConfig) === 'string') {
+      if (publicApi.indexOf(moduleConfig) === -1) return this;
+
       this.each(function () {
         var $this = $(this);
 
-        if (globalConfig === 'destroy') {
-          $.map(initializedModules[selector], function (module) {
-            module.destroy();
-          });
+        var instance = moduleInstances[$this.data('uuid')];
+        if (instance && $.type(instance[moduleConfig]) === 'function') {
+          var args = [];
 
-          initializedModules[selector].length = 0;
-        } else {
-          var module = Module.extend($this, globalConfig);
-          module.init();
+          if (moduleConfig === 'pause') {
+            args.push(!!options);
+          } else if (moduleConfig === 'trigger') {
+            args = Array.prototype.slice.call(pluginArguments, 1);
+          }
+          
+          instance[moduleConfig].apply(instance, args);
 
-          initializedModules[selector].push(module);
+          if (moduleConfig === 'destroy') {
+            moduleInstances[$this.data('uuid')] = undefined;
+            $this.data('uuid', null);
+          }
         }
       });
+
+      return this;
     }
+
+    this.each(function () {
+      var $element = $(this);
+      var uuid, instance;
+
+      if ($element.data('uuid')) {
+        uuid = $element.data('uuid');
+        instance = moduleInstances[uuid];
+      } else {
+        uuid = generateUUID();
+        instance = moduleInstances[uuid] = Module.extend($element, moduleConfig);
+        instance.init();
+
+        $element.data('uuid', uuid);
+      }
+    });
 
     return this;
   };
