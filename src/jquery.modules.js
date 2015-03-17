@@ -28,7 +28,9 @@
   }
 
   var publicApi = ['trigger', 'pause', 'destroy'];
-  var forbidenMethods = ['action', 'destroy', 'init', 'trigger'];
+  var forbidenNames = ['action', 'destroy', 'init', 'trigger'];
+
+  var serviceInstances = {};
 
   var Module = {
     extend: function ($element, cfg) {
@@ -66,6 +68,38 @@
             break;
           default:
             break;
+        }
+      });
+
+      $.each(config.services, function (service, construct) {
+        if (forbidenNames.indexOf(service) !== -1) return;
+
+        // We are using existing service
+        if ($.type(construct) === 'string') {
+          var serviceInstance = serviceInstances[construct];
+
+          if (serviceInstance) {
+            if ($.type(serviceInstance) === 'object') {
+              moduleCore[service] = serviceInstance;
+            } else if ($.type(serviceInstance) === 'function') {
+              moduleCore[service] = serviceInstance();
+            }
+           }
+
+        } else if ($.type(construct) === 'object') {
+          // Cache new service instance
+          if (!serviceInstances[service]) {
+            serviceInstances[service] = construct;
+          }
+
+          moduleCore[service] = construct;
+
+        } else if ($.type(construct) === 'function') {
+          if (!serviceInstances[service]) {
+            serviceInstances[service] = construct;
+          }
+
+          moduleCore[service] = construct();
         }
       });
 
