@@ -39,8 +39,9 @@
           'window': window,
           'document': document
         },
-        actions: {},
-        events: {}
+        actions:  {},
+        events:   {},
+        services: {}
       }, cfg);
 
       var isPaused = false;
