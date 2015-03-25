@@ -1,6 +1,6 @@
 {
   "name": "jquery-modules",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Simple jQuery application modules plugin",
   "main": "dist/jquery.modules.min.js",
   "scripts": {
