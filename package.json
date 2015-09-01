@@ -15,7 +15,7 @@
     "modules"
   ],
   "dependencies": {
-    "jquery": "2.1.3"
+    "jquery": "1.11.3"
   },
   "author": "Davor Grubelic",
   "license": "MIT",
