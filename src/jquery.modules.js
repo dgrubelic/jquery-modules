@@ -177,7 +177,7 @@
         if (isPaused) return;
 
         var actionName = arguments[0],
-          args = Array.prototype.splice.call(arguments, 1);
+          args = [].slice.call(arguments, 1, arguments.length);
 
         if (config.actions[actionName] && config.actions[actionName].apply) {
           return config.actions[actionName].apply(moduleCore, args);
