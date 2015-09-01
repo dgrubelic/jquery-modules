@@ -29,6 +29,7 @@
 
   var publicApi = ['trigger', 'pause', 'destroy'];
   var forbidenNames = ['action', 'destroy', 'init', 'trigger'];
+  var allowedActionParamTypes = ['string', 'array'];
 
   var serviceInstances = {};
 
@@ -73,7 +74,7 @@
       });
 
       $.each(config.services, function (service, construct) {
-        if (forbidenNames.indexOf(service) !== -1) return;
+        if (forbidenNames[service]) return;
 
         // We are using existing service
         if ($.type(construct) === 'string') {
@@ -118,10 +119,6 @@
           eventType = event;
         }
 
-        if (['string', 'array'].indexOf($.type(action)) === -1) {
-          throw "Unsupported event action parameter";
-        }
-
         moduleCore.$el.on(eventType, selector, function (e) {
           if (isPaused) {
             e.preventDefault();
@@ -141,7 +138,7 @@
           }
         });
 
-        if (registredEvents.indexOf(eventType) === -1) {
+        if (registredEvents[eventType]) {
           registredEvents.push(eventType);
         }
       });
@@ -209,7 +206,7 @@
 
     // Call api method
     if ($.type(moduleConfig) === 'string') {
-      if (publicApi.indexOf(moduleConfig) === -1) return this;
+      if (!publicApi[moduleConfig]) return this;
 
       this.each(function () {
         var $this = $(this);
